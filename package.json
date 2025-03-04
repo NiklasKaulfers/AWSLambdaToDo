@@ -1,0 +1,21 @@
+{
+  "name": "awsexercise",
+  "version": "1.0.0",
+  "main": "PutItem.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/node": "^18.19.50",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.712.0",
+    "@aws-sdk/lib-dynamodb": "^3.750.0",
+    "@types/aws-lambda": "^8.10.146",
+    "aws-sdk": "^2.1692.0"
+  }
+}
