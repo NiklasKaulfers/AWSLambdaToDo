@@ -1,9 +1,9 @@
 export class Lists {
     private readonly _list: string;
     private readonly _name: string;
-    private readonly _toDos: string[];
+    private readonly _toDos: Set<string>;
 
-    constructor(list: string, name: string, todos: string[]) {
+    constructor(list: string, name: string, todos: Set<string>) {
         this._list = list;
         this._name = name;
         this._toDos = todos;
@@ -23,15 +23,9 @@ export class Lists {
 
     dto() {
         return {
-            id: {
-                S: this._list,
-            },
-            name: {
-                S: this._name,
-            },
-            ToDos: {
-                SS: this._toDos
-            }
+            id:  this._list,
+            name: this._name,
+            ToDos:  this._toDos
         }
     }
 }
