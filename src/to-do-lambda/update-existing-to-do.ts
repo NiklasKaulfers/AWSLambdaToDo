@@ -9,14 +9,12 @@ export const updateExistingToDo
 
 
     const id: string = verifyPathParameters(pathParameters);
-    const verifiedBody: string = verifyBody(body);
+    const toDo: ToDo = verifyBodyAsToDo(body);
 
-    const parsedBody = JSON.parse(verifiedBody);
 
     const valuesStoredInDB = getStateOfToDoStoredInDB(id);
-    const newStateOfToDo: ToDo = checkInputAgainstStoredValues(parsedBody, valuesStoredInDB, id);
 
-    const successfulDBWrite: PutCommandOutput = await sendUpdate(newStateOfToDo);
+    const successfulDBWrite: PutCommandOutput = await sendUpdate(toDo);
     if (!successfulDBWrite) throw new FunctionError(500, "Dynamo DB did not return properly.");
     return {
         statusCode: 200,
@@ -32,9 +30,16 @@ const verifyPathParameters
     return pathParameters.id;
 }
 
-const verifyBody = (body?: string): string => {
+const verifyBodyAsToDo = (body?: string): ToDo => {
     if (!body) throw new FunctionError(404, "Body is missing.");
-    return body;
+    const parsedBody = JSON.parse(body);
+    if (parsedBody instanceof ToDo) return parsedBody
+    throw new FunctionError(400, "Needs Syntax of ToDo:" +
+        "toDoId: string,\n" +
+        "title: string,\n" +
+        "description?: string,\n" +
+        "isCompleted?: boolean,\n" +
+        "inLists?: string[]}");
 }
 
 const getStateOfToDoStoredInDB = async (toDoId: string) => {
@@ -48,16 +53,6 @@ const getStateOfToDoStoredInDB = async (toDoId: string) => {
     return dbReturnValues.Item;
 }
 
-const checkInputAgainstStoredValues
-    = (parsedBody: any, storedValues: Record<string, any>, id: string): ToDo => {
-
-    const title: string = parsedBody.title ?? storedValues.title;
-    const isCompleted: boolean = parsedBody.isCompleted ?? storedValues.isCompleted;
-    const description: string = parsedBody.description ?? storedValues.description ?? "";
-    const inLists: Set<string> = new Set<string>(parsedBody.inLists) ?? storedValues.inLists;
-
-    return new ToDo(id, isCompleted, title, inLists, description);
-}
 
 const sendUpdate = async (toDo: ToDo): Promise<PutCommandOutput> => {
     const input: PutCommandInput = {

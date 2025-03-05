@@ -30,7 +30,7 @@ const verifyBodyAsToDo = (body?: string): ToDo => {
         "title: string,\n" +
         "description?: string,\n" +
         "isCompleted?: boolean,\n" +
-        "inLists?: Set<string>}");
+        "inLists?: string[]}");
     return parsedBody;
 }
 

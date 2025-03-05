@@ -3,22 +3,29 @@ export interface ToDoInput {
     title: string,
     description?: string,
     isCompleted?: boolean,
-    inLists?: Set<string>
+    inLists?: string[]
 }
 
-export class ToDo {
+export interface ToDoComparable{
+    toDoId?: string,
+    title?: string,
+    description?: string,
+    isCompleted?: boolean
+}
+
+export class ToDo{
     private readonly _toDoId: string; // Primary Key
     private readonly _isCompleted: boolean;
     private readonly _title: string;
     private readonly _description: string;
-    private readonly _inLists: Set<string> | undefined;
+    private readonly _inLists: Set<string>;
 
     constructor({toDoId, isCompleted, title, inLists, description}: ToDoInput) {
         this._toDoId = toDoId;
         this._isCompleted = isCompleted ?? false;
         this._title = title;
         this._description = description ?? "";
-        this._inLists = inLists;
+        this._inLists = new Set<string>(inLists);
     }
 
     get id(): string {
@@ -53,5 +60,15 @@ export class ToDo {
             description: this._description,
             isCompleted: this._isCompleted
         }
+    }
+
+    compare(comparable: ToDoComparable): ToDo{
+        return new ToDo({
+            toDoId: this._toDoId,
+            title: comparable.title ?? this._title,
+            description: comparable.description ?? this._description,
+            isCompleted: comparable.isCompleted ?? this._isCompleted,
+            inLists: Array.from(this._inLists)
+        })
     }
 }
