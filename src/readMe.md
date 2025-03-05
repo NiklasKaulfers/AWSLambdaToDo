@@ -3,7 +3,7 @@
 ## Usage
 each folder is its own lambda function in AWS\
 they get an event through API Gateway with Lambda Proxy Integration\
-each lambda also has full permissions for DynamoDB\
+each lambda also has full permissions for DynamoDB
 
 ## API linking
 /List (Post) -> lists\
@@ -15,4 +15,4 @@ each lambda also has full permissions for DynamoDB\
 /ToDo/{id} (Get) - to-do-lambda\
 /ToDo/{id} (Put) - to-do-lambda\
 /ToDo/addToList (Post) - add-to-do-to-list\
-/ToDos (Get) - get-all-to-dos\
+/ToDos (Get) - get-all-to-dos
