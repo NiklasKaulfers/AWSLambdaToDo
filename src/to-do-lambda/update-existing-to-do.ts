@@ -4,18 +4,16 @@ import {getRequestDB, putRequestDB} from "./helpers/ddb-helper";
 import {FunctionError} from "./errors/function-error";
 import {ToDo} from "./helpers/to-do";
 
-export const putRequestLogic
+export const updateExistingToDo
     = async (pathParameters?: APIGatewayProxyEventPathParameters, body?: string): Promise<APIGatewayProxyResultV2> => {
 
 
+    const id: string = verifyPathParameters(pathParameters);
+    const verifiedBody: string = verifyBody(body);
 
-    verifyNeededParameters(pathParameters, body);
+    const parsedBody = JSON.parse(verifiedBody);
 
-    // verify ensures they exist
-    const id: string = pathParameters!.id!;
-    const parsedBody = JSON.parse(body!);
-
-    const valuesStoredInDB = getCurrentState(id);
+    const valuesStoredInDB = getStateOfToDoStoredInDB(id);
     const newStateOfToDo: ToDo = checkInputAgainstStoredValues(parsedBody, valuesStoredInDB, id);
 
     const successfulDBWrite: PutCommandOutput = await sendUpdate(newStateOfToDo);
@@ -26,19 +24,24 @@ export const putRequestLogic
     }
 }
 
-const verifyNeededParameters
-    = (pathParameters?: APIGatewayProxyEventPathParameters, body?: string) => {
+const verifyPathParameters
+    = (pathParameters?: APIGatewayProxyEventPathParameters) => {
 
     if (!pathParameters) throw new FunctionError(404, "Path parameters are missing.")
     if (!pathParameters.id) throw new FunctionError(404, "Id is missing in Path parameters.")
-    if (!body) throw new FunctionError(404, "Body is missing.")
+    return pathParameters.id;
 }
 
-const getCurrentState = async (id: string) => {
+const verifyBody = (body?: string): string => {
+    if (!body) throw new FunctionError(404, "Body is missing.");
+    return body;
+}
+
+const getStateOfToDoStoredInDB = async (toDoId: string) => {
     const getItemInput: GetCommandInput = {
         TableName: "ToDos",
         Key: {
-            Id: id
+            Id: toDoId
         }
     };
     const dbReturnValues: GetCommandOutput = await getRequestDB(getItemInput);

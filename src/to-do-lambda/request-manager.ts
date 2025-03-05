@@ -1,9 +1,9 @@
 import {HttpMethods} from "./constants/http-methods";
-import {getRequestLogic} from "./get-request-logic";
+import {getToDo} from "./get-to-do";
 import {APIGatewayProxyEventPathParameters} from "aws-lambda";
-import {postRequestLogic} from "./post-request-logic";
+import {createNewToDoInDb} from "./create-new-to-do-in-db";
 import {FunctionError} from "./errors/function-error";
-import {putRequestLogic} from "./put-request-logic";
+import {updateExistingToDo} from "./update-existing-to-do";
 import {deleteToDoAndLinkedLists} from "./delete-to-do-and-linked-lists";
 
 export const handleRequest = async (method: string, body?: string, pathParameters?: APIGatewayProxyEventPathParameters) => {
@@ -11,11 +11,11 @@ export const handleRequest = async (method: string, body?: string, pathParameter
         case HttpMethods.DELETE:
             return deleteToDoAndLinkedLists(pathParameters);
         case HttpMethods.POST:
-            return postRequestLogic(body);
+            return createNewToDoInDb(body);
         case HttpMethods.GET:
-            return getRequestLogic(pathParameters);
+            return getToDo(pathParameters);
         case HttpMethods.PUT:
-            return putRequestLogic(pathParameters, body);
+            return updateExistingToDo(pathParameters, body);
         default:
             throw new FunctionError(500, "No method detected.")
     }

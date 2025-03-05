@@ -5,7 +5,7 @@ import {ToDo} from "./helpers/to-do";
 import {PutCommandInput, PutCommandOutput} from "@aws-sdk/lib-dynamodb";
 import {putRequestDB} from "./helpers/ddb-helper";
 
-export const postRequestLogic
+export const createNewToDoInDb
     = async (body?: string): Promise<APIGatewayProxyResultV2> => {
 
     const error: FunctionError | undefined = verifyBody(body)
@@ -13,8 +13,8 @@ export const postRequestLogic
 
     const parsedBody: any = JSON.parse(body!);
     if (!verifyBody(parsedBody)) throw new FunctionError(500, "Internal Server Error.");
-    const dbResponse: PutCommandOutput = await sendRequestToDB(parsedBody);
-    checkResponse(dbResponse)
+    const dbResponse: PutCommandOutput = await sendPostRequestWithToDoToDB(parsedBody);
+    if (!dbResponse) throw new FunctionError(400, "Dynamo DB didnt respond.")
     return {
         statusCode: 200,
         body: JSON.stringify("Success.")
@@ -47,7 +47,7 @@ const verifyBody = (body?: string): FunctionError | undefined => {
     }
 }
 
-const sendRequestToDB = async (parsedBody: any): Promise<PutCommandOutput> => {
+const sendPostRequestWithToDoToDB = async (parsedBody: any): Promise<PutCommandOutput> => {
     const title: string = parsedBody.title;
     const id: string = parsedBody.id;
     const description: string = parsedBody.description ?? "";
@@ -55,22 +55,14 @@ const sendRequestToDB = async (parsedBody: any): Promise<PutCommandOutput> => {
     const inLists: Set<string> = new Set<string>(parsedBody.inLists) ?? new Set<string>("0");
 
     const toDo: ToDo = new ToDo(id, isCompleted, title, inLists, description);
-    return await sendFormattedRequestToDB(toDo);
+    return await sendFormattedPostRequestForToDoToDB(toDo);
 }
 
-const sendFormattedRequestToDB = async (toDo: ToDo): Promise<PutCommandOutput> => {
+const sendFormattedPostRequestForToDoToDB = async (toDo: ToDo): Promise<PutCommandOutput> => {
     const input: PutCommandInput = {
         TableName: "ToDos",
         Item: toDo.dto(),
         ConditionExpression: "attribute_not_exists(id)"
     }
     return await putRequestDB(input);
-}
-
-const checkResponse = (response: any) => {
-    verify({
-        param: response,
-        message: "DynamoDB write failed.",
-        statusCode: 500
-    })
 }

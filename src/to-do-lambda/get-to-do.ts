@@ -5,20 +5,20 @@ import {getRequestDB} from "./helpers/ddb-helper";
 import {FunctionError} from "./errors/function-error";
 import {GetCommandInput} from "@aws-sdk/lib-dynamodb";
 
-export const getRequestLogic
+export const getToDo
     = async (pathParameters?: APIGatewayProxyEventPathParameters): Promise<APIGatewayProxyResultV2> => {
 
-    const test: FunctionError | undefined = verifyPath(pathParameters);
-    if(test instanceof FunctionError) throw test
-    // checked with verify -> have to exist
-    const requestAnswer: GetItemCommandOutput = await sendRequest(pathParameters!.id!)
+    const pathVerification: FunctionError | string = verifyPath(pathParameters);
+    if (pathVerification instanceof FunctionError) throw pathVerification;
+    const requestAnswer: GetItemCommandOutput = await sendGetRequestOnToDos(pathVerification);
+
     return {
         statusCode: 200,
         body: JSON.stringify(requestAnswer.Item)
     }
 }
 
-const verifyPath = (pathParameters?: APIGatewayProxyEventPathParameters): FunctionError | undefined => {
+const verifyPath = (pathParameters?: APIGatewayProxyEventPathParameters): FunctionError | string => {
     try {
         verify({
             param: pathParameters,
@@ -30,19 +30,21 @@ const verifyPath = (pathParameters?: APIGatewayProxyEventPathParameters): Functi
             statusCode: 404,
             message: "Id in path missing"
         })
-    } catch (e){
-        if (e instanceof FunctionError){
+    } catch (e) {
+        if (e instanceof FunctionError) {
             return e;
         }
-        throw new FunctionError(500, "Internal Server Error.")
     }
+    if (pathParameters && pathParameters.id) return pathParameters.id;
+    // technically redundant, however needed for functioning code
+    return new FunctionError(500, "Internal Server Error")
 }
 
-const sendRequest = async (id: string) => {
+const sendGetRequestOnToDos = async (toDoId: string) => {
     const getInput: GetCommandInput = {
         TableName: "ToDos",
         Key: {
-            Id: id
+            Id: toDoId
         }
     };
     return await getRequestDB(getInput);
