@@ -9,7 +9,7 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import {verify} from "./helpers/helpers";
 
-export const deleteRequestLogic
+export const deleteToDoAndLinkedLists
     = async (pathParameters?: APIGatewayProxyEventPathParameters): Promise<APIGatewayProxyResultV2> => {
 
     const error: FunctionError | undefined = verifyNeededParameters(pathParameters);
@@ -17,9 +17,9 @@ export const deleteRequestLogic
 
 
     const toDoId: string = pathParameters!.id!;
-    const listIds: string[] = await getToDosFromDb(toDoId);
+    const listIds: string[] = await getListsContainingToDoFromDB(toDoId);
 
-    await sendDbDelete(toDoId, listIds);
+    await deleteToDoAndConnectedListsFromDB(toDoId, listIds);
 
     return {
         statusCode: 200,
@@ -49,12 +49,11 @@ const verifyNeededParameters = (pathParameters?: APIGatewayProxyEventPathParamet
 }
 
 
-const getToDosFromDb = async (id: string): Promise<string[]> => {
-    // transact write uses the TransactWriteItem Interface
+const getListsContainingToDoFromDB = async (toDoId: string): Promise<string[]> => {
     const dbInput: GetCommandInput = {
         TableName: "ToDos",
         Key: {
-            Id:  id
+            Id:  toDoId
         },
         AttributesToGet: ["inLists"]
     }
@@ -65,23 +64,23 @@ const getToDosFromDb = async (id: string): Promise<string[]> => {
 }
 
 
-const sendDbDelete = async (toDoId: string, listIds: string[]) => {
-    const transactWriteCommandInput = createInput(toDoId, listIds);
+const deleteToDoAndConnectedListsFromDB = async (toDoId: string, listIdsContainingToDo: string[]) => {
+    const transactWriteCommandInput = createTransactWriteCommandInputToDeleteToDoAndConnectedLists(toDoId, listIdsContainingToDo);
 
     const dbResponse: TransactWriteCommandOutput = await transactRequestDB(transactWriteCommandInput);
     return dbResponse;
 }
 
-const createInput = (toDoId: string, listIds: string[]): TransactWriteCommandInput => {
-    const transactItems = listIds
-        .map((listId): TransactWriteCommandInput => {
+const createTransactWriteCommandInputToDeleteToDoAndConnectedLists = (toDoId: string, listIdsContainingToDo: string[]): TransactWriteCommandInput => {
+    const transactItems = listIdsContainingToDo
+        .map((listIdContainingToDo): TransactWriteCommandInput => {
             return {
                 TransactItems:
                     [{
                         Update: {
                             TableName: "Lists",
                             Key: {
-                                id: listId
+                                id: listIdContainingToDo
                             },
                             ExpressionAttributeValues: {
                                 ":toDo": new Set(toDoId)
@@ -91,7 +90,7 @@ const createInput = (toDoId: string, listIds: string[]): TransactWriteCommandInp
                     }]
             }
         })
-        .concat(createDeletesArray(toDoId))
+        .concat(createTransactDeleteOfToDo(toDoId))
         .map(transactWriteCommandInput => transactWriteCommandInput.TransactItems || [])
         .flat()
 
@@ -101,14 +100,14 @@ const createInput = (toDoId: string, listIds: string[]): TransactWriteCommandInp
 }
 
 
-const createDeletesArray = (id: string): TransactWriteCommandInput => {
+const createTransactDeleteOfToDo = (toDoId: string): TransactWriteCommandInput => {
     return {
         TransactItems: [
             {
                 Delete: {
                     TableName: "ToDos",
                     Key: {
-                        Id: id
+                        Id: toDoId
                     }
                 }
             }

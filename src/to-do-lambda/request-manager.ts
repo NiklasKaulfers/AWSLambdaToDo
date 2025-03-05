@@ -4,12 +4,12 @@ import {APIGatewayProxyEventPathParameters} from "aws-lambda";
 import {postRequestLogic} from "./post-request-logic";
 import {FunctionError} from "./errors/function-error";
 import {putRequestLogic} from "./put-request-logic";
-import {deleteRequestLogic} from "./delete-request-logic";
+import {deleteToDoAndLinkedLists} from "./delete-to-do-and-linked-lists";
 
 export const handleRequest = async (method: string, body?: string, pathParameters?: APIGatewayProxyEventPathParameters) => {
     switch (method) {
         case HttpMethods.DELETE:
-            return deleteRequestLogic(pathParameters);
+            return deleteToDoAndLinkedLists(pathParameters);
         case HttpMethods.POST:
             return postRequestLogic(body);
         case HttpMethods.GET:
