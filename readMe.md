@@ -9,14 +9,14 @@ each lambda also has full permissions for DynamoDB
 compile files\
 setup dynamo db table according to table design\
 setup an IAM roles with those permissions:\
-- AmazoneAPIGatewayInvokeFullAccess\
-- AmazonDynamoDBFullAccess\
-- AWSLambdaInvocation-DynamoDB\
+- AmazoneAPIGatewayInvokeFullAccess
+- AmazonDynamoDBFullAccess
+- AWSLambdaInvocation-DynamoDB
 zip contents of each folder in dist (compiled files from src)\
 each one of them will be its own lamdba function for each of them:\
--> attach the prior created IAM role\
--> upload respective lambda as zip\
-setup APIGateway with LambdaProxyIntegration according to API linking with ur lambdas\
+- attach the prior created IAM role
+- upload respective lambda as zip
+setup APIGateway with LambdaProxyIntegration according to API linking with ur lambdas
 
 
 
