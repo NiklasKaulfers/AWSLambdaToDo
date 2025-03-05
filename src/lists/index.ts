@@ -4,12 +4,11 @@ import {
     GetItemCommand,
     GetItemCommandOutput,
     GetItemInput,
-    PutItemCommand,
-    PutItemCommandOutput,
-    PutItemInput
+
 } from "@aws-sdk/client-dynamodb";
 import {Lists} from "./helpers/lists";
 import {FunctionError} from "./errors/function-error"
+import {PutCommand, PutCommandInput, PutCommandOutput} from "@aws-sdk/lib-dynamodb";
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
 
@@ -35,13 +34,15 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
                 if (!toDosInList) throw new FunctionError(400, "ToDos are missing.");
 
-                const toDos = new Lists(listForPost, nameForPost, toDosInList);
-                const paramsForPost: PutItemInput = {
+                const toDosAsSet: Set<string> = new  Set<string>(toDosInList)
+
+                const toDos = new Lists(listForPost, nameForPost, toDosAsSet);
+                const paramsForPost: PutCommandInput = {
                     TableName: "Lists",
                     Item: toDos.dto(),
                     ConditionExpression: "attribute_not_exists(id)"
                 }
-                const postItemInput: PutItemCommandOutput = await client.send(new PutItemCommand(paramsForPost));
+                const postItemInput: PutCommandOutput = await client.send(new PutCommand(paramsForPost));
                 if (postItemInput) {
                     return {
                         statusCode: 200,
@@ -73,17 +74,18 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
                 if (!toDosForPut) throw new FunctionError(400, "Id is missing in request body.")
                 if (!nameForPut) throw new FunctionError(400, "Name is missing in request body.")
 
+                const toDosForPutAsSet: Set<string> = new Set<string>(toDosForPut)
 
-                const listForPut = new Lists(listId, nameForPut, toDosForPut);
+                const listForPut = new Lists(listId, nameForPut, toDosForPutAsSet);
                 const items = listForPut.dto();
 
-                const paramsForPut: PutItemInput = {
+                const paramsForPut: PutCommandInput = {
                     TableName: "Lists",
                     Item: items,
                     ConditionExpression: "attribute_exists(id)"
                 }
 
-                const putItemInput: PutItemCommandOutput = await client.send(new PutItemCommand(paramsForPut));
+                const putItemInput: PutCommandOutput = await client.send(new PutCommand(paramsForPut));
                 if (putItemInput) {
                     return {
                         statusCode: 200,
