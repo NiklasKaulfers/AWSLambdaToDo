@@ -8,8 +8,8 @@ import {
     PutItemCommandOutput,
     PutItemInput
 } from "@aws-sdk/client-dynamodb";
-import {Lists} from "./lists";
-import {FunctionError} from "./errors";
+import {Lists} from "./helpers/lists";
+import {FunctionError} from "./errors/function-error"
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
 

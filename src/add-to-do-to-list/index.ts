@@ -1,5 +1,6 @@
 import {APIGatewayProxyEvent, APIGatewayProxyResultV2} from "aws-lambda";
-import {FunctionError, verify} from "./errors";
+import {FunctionError} from "./errors/function-error";
+import {verify} from "./helpers/verification-helper";
 import {
     DynamoDBDocumentClient,
     TransactWriteCommand,

@@ -1,6 +1,6 @@
 import {APIGatewayProxyEventPathParameters, APIGatewayProxyResultV2} from "aws-lambda";
 import {FunctionError} from "./errors/function-error";
-import { getRequestDB, transactRequestDB} from "./helpers/ddb-helper";
+import {getRequestDB, transactRequestDB} from "./helpers/ddb-helper";
 import {
     GetCommandInput,
     GetCommandOutput,
@@ -102,7 +102,7 @@ const createInput = (toDoId: string, listIds: string[]): TransactWriteCommandInp
 
 
 const createDeletesArray = (id: string): TransactWriteCommandInput => {
-    const deleteItemCommand: TransactWriteCommandInput = {
+    return {
         TransactItems: [
             {
                 Delete: {
@@ -114,5 +114,4 @@ const createDeletesArray = (id: string): TransactWriteCommandInput => {
             }
         ]
     }
-    return deleteItemCommand
 }
