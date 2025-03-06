@@ -6,6 +6,7 @@ they get an event through API Gateway with Lambda Proxy Integration\
 each lambda also has full permissions for DynamoDB
 
 ## Implementation
+add .env in to-do-lambda, syntax in Environment Variables\
 compile files\
 setup dynamo db table according to table design\
 set up an IAM roles with those permissions:
