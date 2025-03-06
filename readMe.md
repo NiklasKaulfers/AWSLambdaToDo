@@ -8,19 +8,25 @@ each lambda also has full permissions for DynamoDB
 ## Implementation
 compile files\
 setup dynamo db table according to table design\
-setup an IAM roles with those permissions:
-- AmazoneAPIGatewayInvokeFullAccess
+set up an IAM roles with those permissions:
+- AmazonAPIGatewayInvokeFullAccess
 - AmazonDynamoDBFullAccess
 - AWSLambdaInvocation-DynamoDB
 
 zip contents of each folder in dist (compiled files from src)\
-each one of them will be its own lamdba function for each of them:
+each one of them will be its own lambda function for each of them:
 - attach the prior created IAM role
 - upload respective lambda as zip
 
 setup APIGateway with LambdaProxyIntegration according to API linking with ur lambdas
 
+## What's being worked on
+currently it's just the to-to-lambda\
+therefor others are not as improved and might be faulty
 
+## Environment Variables
+it needs TODO_TABLE_NAME and LIST_TABLE_NAME as environment variables in an .env file.\
+this needs to be created as it is not stored within the repo
 
 ## API linking
 /List (Post) -> lists\

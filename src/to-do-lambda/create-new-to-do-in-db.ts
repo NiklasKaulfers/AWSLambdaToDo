@@ -5,6 +5,9 @@ import {ToDo} from "./helpers/to-do";
 import {PutCommandInput, PutCommandOutput} from "@aws-sdk/lib-dynamodb";
 import {putRequestDB} from "./helpers/ddb-helper";
 
+const TODO_TABLE_NAME = process.env.TODO_TABLE_NAME;
+
+
 export const createNewToDoInDb
     = async (body?: string): Promise<APIGatewayProxyResultV2> => {
 
@@ -36,7 +39,7 @@ const verifyBodyAsToDo = (body?: string): ToDo => {
 
 const sendPostRequestWithToDoToDB = async (toDo: ToDo): Promise<PutCommandOutput> => {
     const input: PutCommandInput = {
-        TableName: "ToDos",
+        TableName: TODO_TABLE_NAME,
         Item: toDo.dto(),
         ConditionExpression: "attribute_not_exists(id)"
     }

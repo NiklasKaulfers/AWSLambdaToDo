@@ -5,6 +5,9 @@ import {getRequestDB} from "./helpers/ddb-helper";
 import {FunctionError} from "./errors/function-error";
 import {GetCommandInput} from "@aws-sdk/lib-dynamodb";
 
+const TODO_TABLE_NAME = process.env.TODO_TABLENAME
+
+
 export const getToDo
     = async (pathParameters?: APIGatewayProxyEventPathParameters): Promise<APIGatewayProxyResultV2> => {
 
@@ -42,7 +45,7 @@ const verifyPath = (pathParameters?: APIGatewayProxyEventPathParameters): Functi
 
 const sendGetRequestOnToDos = async (toDoId: string) => {
     const getInput: GetCommandInput = {
-        TableName: "ToDos",
+        TableName: TODO_TABLE_NAME,
         Key: {
             Id: toDoId
         }

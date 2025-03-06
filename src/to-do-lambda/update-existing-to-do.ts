@@ -2,19 +2,24 @@ import {APIGatewayProxyEventPathParameters, APIGatewayProxyResultV2} from "aws-l
 import {GetCommandInput, GetCommandOutput, PutCommandInput, PutCommandOutput} from "@aws-sdk/lib-dynamodb";
 import {getRequestDB, putRequestDB} from "./helpers/ddb-helper";
 import {FunctionError} from "./errors/function-error";
-import {ToDo} from "./helpers/to-do";
+import {ToDo, ToDoComparable, ToDoInput} from "./helpers/to-do";
+
+const TODO_TABLE_NAME = process.env.TODO_TABLE_NAME;
 
 export const updateExistingToDo
     = async (pathParameters?: APIGatewayProxyEventPathParameters, body?: string): Promise<APIGatewayProxyResultV2> => {
 
 
     const id: string = verifyPathParameters(pathParameters);
-    const toDo: ToDo = verifyBodyAsToDo(body);
+    const toDoComparable: ToDoComparable = verifyBodyAsToDoComparable(body);
 
 
-    const valuesStoredInDB = getStateOfToDoStoredInDB(id);
+    const valuesStoredInDB: Record<string, any> = await getStateOfToDoStoredInDB(id);
+    const storedToDo: ToDo = generateToDoFromRecord(valuesStoredInDB, id);
 
-    const successfulDBWrite: PutCommandOutput = await sendUpdate(toDo);
+    const newToDo: ToDo = storedToDo.compare(toDoComparable);
+
+    const successfulDBWrite: PutCommandOutput = await sendUpdate(newToDo);
     if (!successfulDBWrite) throw new FunctionError(500, "Dynamo DB did not return properly.");
     return {
         statusCode: 200,
@@ -30,33 +35,40 @@ const verifyPathParameters
     return pathParameters.id;
 }
 
-const verifyBodyAsToDo = (body?: string): ToDo => {
+const verifyBodyAsToDoComparable = (body?: string): ToDoComparable => {
     if (!body) throw new FunctionError(404, "Body is missing.");
-    const parsedBody = JSON.parse(body);
-    if (parsedBody instanceof ToDo) return parsedBody
-    throw new FunctionError(400, "Needs Syntax of ToDo:" +
-        "toDoId: string,\n" +
-        "title: string,\n" +
-        "description?: string,\n" +
-        "isCompleted?: boolean,\n" +
-        "inLists?: string[]}");
+    return JSON.parse(body);
 }
 
 const getStateOfToDoStoredInDB = async (toDoId: string) => {
     const getItemInput: GetCommandInput = {
-        TableName: "ToDos",
+        TableName: TODO_TABLE_NAME,
         Key: {
             Id: toDoId
         }
     };
     const dbReturnValues: GetCommandOutput = await getRequestDB(getItemInput);
+    if (!dbReturnValues.Item) throw new FunctionError(404, "DB does not have the item stored.");
     return dbReturnValues.Item;
 }
 
 
+const generateToDoFromRecord = (input: Record<string, any>, toDoId: string): ToDo => {
+    const toDoInterface: ToDoInput = {
+        toDoId: toDoId,
+        inLists: Array.from(input.inLists),
+        isCompleted: input.isCompleted,
+        title: input.title,
+        description: input.description
+    }
+    return new ToDo(toDoInterface);
+}
+
+
+
 const sendUpdate = async (toDo: ToDo): Promise<PutCommandOutput> => {
     const input: PutCommandInput = {
-        TableName: "ToDos",
+        TableName: TODO_TABLE_NAME,
         Item: toDo.dto(),
         ConditionExpression: "attribute_exists(Id)"
     };

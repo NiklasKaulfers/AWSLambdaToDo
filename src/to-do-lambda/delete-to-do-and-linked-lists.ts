@@ -9,6 +9,10 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import {verify} from "./helpers/helpers";
 
+
+const TODO_TABLE_NAME = process.env.TODO_TABLE_NAME;
+const LIST_TABLE_NAME = process.env.LIST_TABLE_NAME;
+
 export const deleteToDoAndLinkedLists
     = async (pathParameters?: APIGatewayProxyEventPathParameters): Promise<APIGatewayProxyResultV2> => {
 
@@ -51,7 +55,7 @@ const verifyNeededParameters = (pathParameters?: APIGatewayProxyEventPathParamet
 
 const getListsContainingToDoFromDB = async (toDoId: string): Promise<string[]> => {
     const dbInput: GetCommandInput = {
-        TableName: "ToDos",
+        TableName: TODO_TABLE_NAME,
         Key: {
             Id:  toDoId
         },
@@ -78,7 +82,7 @@ const createTransactWriteCommandInputToDeleteToDoAndConnectedLists = (toDoId: st
                 TransactItems:
                     [{
                         Update: {
-                            TableName: "Lists",
+                            TableName: LIST_TABLE_NAME,
                             Key: {
                                 id: listIdContainingToDo
                             },
@@ -105,7 +109,7 @@ const createTransactDeleteOfToDo = (toDoId: string): TransactWriteCommandInput =
         TransactItems: [
             {
                 Delete: {
-                    TableName: "ToDos",
+                    TableName: TODO_TABLE_NAME,
                     Key: {
                         Id: toDoId
                     }

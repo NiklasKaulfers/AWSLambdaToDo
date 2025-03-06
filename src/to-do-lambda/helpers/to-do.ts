@@ -7,7 +7,6 @@ export interface ToDoInput {
 }
 
 export interface ToDoComparable{
-    toDoId?: string,
     title?: string,
     description?: string,
     isCompleted?: boolean
