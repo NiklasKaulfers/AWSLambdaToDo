@@ -69,52 +69,93 @@ const getListsContainingToDoFromDB = async (toDoId: string): Promise<string[]> =
 
 
 const deleteToDoAndConnectedListsFromDB = async (toDoId: string, listIdsContainingToDo: string[]) => {
-    const transactWriteCommandInput = createTransactWriteCommandInputToDeleteToDoAndConnectedLists(toDoId, listIdsContainingToDo);
+    const transactWriteCommandInput = new TransactWriteCommandInputGenerator()
+        .createDeleteOfToDo(toDoId)
+        .deleteReferencesToToDoInLists(toDoId, listIdsContainingToDo)
+        .transcatWriteCommandInput;
 
+    if (!transactWriteCommandInput) throw new FunctionError(500, "Could not generate an input for the Transaction.")
     const dbResponse: TransactWriteCommandOutput = await transactRequestDB(transactWriteCommandInput);
     return dbResponse;
 }
 
-const createTransactWriteCommandInputToDeleteToDoAndConnectedLists = (toDoId: string, listIdsContainingToDo: string[]): TransactWriteCommandInput => {
-    const transactItems = listIdsContainingToDo
-        .map((listIdContainingToDo): TransactWriteCommandInput => {
-            return {
-                TransactItems:
-                    [{
-                        Update: {
-                            TableName: LIST_TABLE_NAME,
-                            Key: {
-                                id: listIdContainingToDo
-                            },
-                            ExpressionAttributeValues: {
-                                ":toDo": new Set(toDoId)
-                            },
-                            UpdateExpression: "Delete ToDos :toDo",
-                        }
-                    }]
-            }
-        })
-        .concat(createTransactDeleteOfToDo(toDoId))
-        .map(transactWriteCommandInput => transactWriteCommandInput.TransactItems || [])
-        .flat()
-
-    return {
-        TransactItems: transactItems
+class TransactWriteCommandInputGenerator {
+    private _transcatWriteCommandInput: TransactWriteCommandInput | undefined;
+    constructor(transactWriteCommandInput?: TransactWriteCommandInput) {
+        this._transcatWriteCommandInput = transactWriteCommandInput;
     }
-}
 
-
-const createTransactDeleteOfToDo = (toDoId: string): TransactWriteCommandInput => {
-    return {
-        TransactItems: [
-            {
-                Delete: {
-                    TableName: TODO_TABLE_NAME,
-                    Key: {
-                        Id: toDoId
+    createDeleteOfToDo = (toDoId: string): this => {
+        const deleteInput: TransactWriteCommandInput = {
+            TransactItems: [
+                {
+                    Delete: {
+                        TableName: TODO_TABLE_NAME,
+                        Key: {
+                            Id: toDoId
+                        }
                     }
                 }
+            ]
+        }
+        if (this._transcatWriteCommandInput) {
+            const newArray =
+                [deleteInput]
+                    .concat(this._transcatWriteCommandInput)
+                    .map(transactWriteCommandInput => transactWriteCommandInput.TransactItems || [])
+                    .flat()
+            this._transcatWriteCommandInput = {
+                TransactItems: newArray
             }
-        ]
+            return this;
+        }
+
+        this._transcatWriteCommandInput = deleteInput;
+        return this;
     }
+
+    deleteReferencesToToDoInLists = (toDoId: string, listIdsContainingToDo: string[]): this => {
+        const transactItems = listIdsContainingToDo
+            .map((listIdContainingToDo): TransactWriteCommandInput => {
+                return {
+                    TransactItems:
+                        [{
+                            Update: {
+                                TableName: LIST_TABLE_NAME,
+                                Key: {
+                                    id: listIdContainingToDo
+                                },
+                                ExpressionAttributeValues: {
+                                    ":toDo": new Set(toDoId)
+                                },
+                                UpdateExpression: "Delete ToDos :toDo",
+                            }
+                        }]
+                }
+            })
+
+        if (this._transcatWriteCommandInput){
+            const concatWithStoredValues = transactItems
+                .concat(this._transcatWriteCommandInput)
+                .map(transactWriteCommandInput => transactWriteCommandInput.TransactItems || [])
+                .flat();
+            this._transcatWriteCommandInput = {
+                TransactItems: concatWithStoredValues
+            }
+            return this;
+        }
+
+        const inputWithoutStoredValues = transactItems
+            .map(transactWriteCommandInput => transactWriteCommandInput.TransactItems || [])
+            .flat();
+
+        this._transcatWriteCommandInput =  {
+            TransactItems: inputWithoutStoredValues
+        }
+        return this;
+    }
+    get transcatWriteCommandInput(): TransactWriteCommandInput | undefined {
+        return this._transcatWriteCommandInput;
+    }
+
 }
