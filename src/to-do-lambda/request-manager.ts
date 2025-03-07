@@ -6,10 +6,10 @@ import {FunctionError} from "./errors/function-error";
 import {updateExistingToDo} from "./update-existing-to-do";
 import {deleteToDoAndLinkedLists} from "./delete-to-do-and-linked-lists";
 
-export const handleRequest = async (method: string, body?: string, pathParameters?: APIGatewayProxyEventPathParameters) => {
+export const handleRequest = async (toDoTableName: string, listTableName: string, method: string, body?: string, pathParameters?: APIGatewayProxyEventPathParameters) => {
     switch (method) {
         case HttpMethods.DELETE:
-            return deleteToDoAndLinkedLists(pathParameters);
+            return deleteToDoAndLinkedLists(toDoTableName, listTableName, pathParameters);
         case HttpMethods.POST:
             return createNewToDoInDb(body);
         case HttpMethods.GET:

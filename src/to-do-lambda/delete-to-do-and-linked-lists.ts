@@ -7,23 +7,17 @@ import {
     TransactWriteCommandInput,
     TransactWriteCommandOutput
 } from "@aws-sdk/lib-dynamodb";
-import {verify} from "./helpers/helpers";
 
 
-const TODO_TABLE_NAME = process.env.TODO_TABLE_NAME;
-const LIST_TABLE_NAME = process.env.LIST_TABLE_NAME;
 
 export const deleteToDoAndLinkedLists
-    = async (pathParameters?: APIGatewayProxyEventPathParameters): Promise<APIGatewayProxyResultV2> => {
+    = async (toDoTableName: string, listTableName: string, pathParameters?: APIGatewayProxyEventPathParameters): Promise<APIGatewayProxyResultV2> => {
 
-    const error: FunctionError | undefined = verifyNeededParameters(pathParameters);
-    if (error) throw error;
+    const toDoId: string = verifyNeededParameters(pathParameters);
 
+    const listIds: string[] = await getListsContainingToDoFromDB(toDoTableName, toDoId);
 
-    const toDoId: string = pathParameters!.id!;
-    const listIds: string[] = await getListsContainingToDoFromDB(toDoId);
-
-    await deleteToDoAndConnectedListsFromDB(toDoId, listIds);
+    await deleteToDoAndConnectedListsFromDB(toDoTableName, toDoId, listTableName, listIds);
 
     return {
         statusCode: 204,
@@ -32,32 +26,18 @@ export const deleteToDoAndLinkedLists
 
 }
 
-const verifyNeededParameters = (pathParameters?: APIGatewayProxyEventPathParameters): FunctionError | undefined => {
-    try {
-        verify({
-            param: pathParameters,
-            statusCode: 404,
-            message: "Path parameters are missing."
-        })
-        verify({
-            param: pathParameters!.id,
-            statusCode: 404,
-            message: "Id within path parameters is missing."
-        })
-    } catch (e) {
-        if (e instanceof FunctionError) {
-            return e;
-        }
-        throw new FunctionError(500, "Internal Server Error.")
-    }
+const verifyNeededParameters = (pathParameters?: APIGatewayProxyEventPathParameters): string => {
+    if (!pathParameters) throw new FunctionError(404, "Path parameters are missing.");
+    if (!pathParameters.id) throw new FunctionError(404, "id in path parameters is missing.")
+    return pathParameters.id;
 }
 
 
-const getListsContainingToDoFromDB = async (toDoId: string): Promise<string[]> => {
+const getListsContainingToDoFromDB = async (toDoTableName: string, toDoId: string): Promise<string[]> => {
     const dbInput: GetCommandInput = {
-        TableName: TODO_TABLE_NAME,
+        TableName: toDoTableName,
         Key: {
-            Id:  toDoId
+            Id: toDoId
         },
         AttributesToGet: ["inLists"]
     }
@@ -68,29 +48,29 @@ const getListsContainingToDoFromDB = async (toDoId: string): Promise<string[]> =
 }
 
 
-const deleteToDoAndConnectedListsFromDB = async (toDoId: string, listIdsContainingToDo: string[]) => {
-    const transactWriteCommandInput = new TransactWriteCommandInputGenerator()
-        .createDeleteOfToDo(toDoId)
-        .deleteReferencesToToDoInLists(toDoId, listIdsContainingToDo)
+const deleteToDoAndConnectedListsFromDB = async (toDoTableName: string, toDoId: string,listTableName: string, listIdsContainingToDo: string[]) => {
+    const transactWriteCommandInput: TransactWriteCommandInput | undefined = new TransactWriteCommandInputGenerator()
+        .deleteToDoFromToDos(toDoTableName, toDoId)
+        .deleteReferencesToToDoFromLists(toDoId, listTableName, listIdsContainingToDo)
         .transcatWriteCommandInput;
-
-    if (!transactWriteCommandInput) throw new FunctionError(500, "Could not generate an input for the Transaction.")
+    if (!transactWriteCommandInput) throw new FunctionError(400, "Could not generate Transaction Input.");
     const dbResponse: TransactWriteCommandOutput = await transactRequestDB(transactWriteCommandInput);
     return dbResponse;
 }
 
 class TransactWriteCommandInputGenerator {
-    private _transcatWriteCommandInput: TransactWriteCommandInput | undefined;
+    private readonly _transcatWriteCommandInput: TransactWriteCommandInput | undefined;
+
     constructor(transactWriteCommandInput?: TransactWriteCommandInput) {
         this._transcatWriteCommandInput = transactWriteCommandInput;
     }
 
-    createDeleteOfToDo = (toDoId: string): this => {
+    deleteToDoFromToDos = (toDoTableName: string, toDoId: string): TransactWriteCommandInputGenerator => {
         const deleteInput: TransactWriteCommandInput = {
             TransactItems: [
                 {
                     Delete: {
-                        TableName: TODO_TABLE_NAME,
+                        TableName: toDoTableName,
                         Key: {
                             Id: toDoId
                         }
@@ -104,24 +84,23 @@ class TransactWriteCommandInputGenerator {
                     .concat(this._transcatWriteCommandInput)
                     .map(transactWriteCommandInput => transactWriteCommandInput.TransactItems || [])
                     .flat()
-            this._transcatWriteCommandInput = {
+            const updatedCommand = {
                 TransactItems: newArray
             }
-            return this;
+            return new TransactWriteCommandInputGenerator(updatedCommand);
         }
 
-        this._transcatWriteCommandInput = deleteInput;
-        return this;
+        return new TransactWriteCommandInputGenerator(deleteInput);
     }
 
-    deleteReferencesToToDoInLists = (toDoId: string, listIdsContainingToDo: string[]): this => {
+    deleteReferencesToToDoFromLists = (toDoId: string,listTableName: string, listIdsContainingToDo: string[]): TransactWriteCommandInputGenerator => {
         const transactItems = listIdsContainingToDo
             .map((listIdContainingToDo): TransactWriteCommandInput => {
                 return {
                     TransactItems:
                         [{
                             Update: {
-                                TableName: LIST_TABLE_NAME,
+                                TableName: listTableName,
                                 Key: {
                                     id: listIdContainingToDo
                                 },
@@ -134,28 +113,28 @@ class TransactWriteCommandInputGenerator {
                 }
             })
 
-        if (this._transcatWriteCommandInput){
+        if (this._transcatWriteCommandInput) {
             const concatWithStoredValues = transactItems
                 .concat(this._transcatWriteCommandInput)
                 .map(transactWriteCommandInput => transactWriteCommandInput.TransactItems || [])
                 .flat();
-            this._transcatWriteCommandInput = {
+            const generateCommandWithStoredVariables = {
                 TransactItems: concatWithStoredValues
             }
-            return this;
+            return new TransactWriteCommandInputGenerator(generateCommandWithStoredVariables);
         }
 
         const inputWithoutStoredValues = transactItems
             .map(transactWriteCommandInput => transactWriteCommandInput.TransactItems || [])
             .flat();
 
-        this._transcatWriteCommandInput =  {
+        const generateCommandAsInit = {
             TransactItems: inputWithoutStoredValues
         }
-        return this;
+        return new TransactWriteCommandInputGenerator(generateCommandAsInit);
     }
+
     get transcatWriteCommandInput(): TransactWriteCommandInput | undefined {
         return this._transcatWriteCommandInput;
     }
-
 }
