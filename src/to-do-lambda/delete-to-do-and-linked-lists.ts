@@ -26,7 +26,7 @@ export const deleteToDoAndLinkedLists
     await deleteToDoAndConnectedListsFromDB(toDoId, listIds);
 
     return {
-        statusCode: 200,
+        statusCode: 204,
         body: JSON.stringify({message: `Successfully deleted ToDo ${toDoId} `})
     }
 

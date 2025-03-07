@@ -44,7 +44,7 @@ export class ToDo{
     }
 
     dto() {
-        if (this._inLists) {
+        if (this._inLists.size > 0) {
             return {
                 Id: this._toDoId,
                 title: this._title,
@@ -62,12 +62,21 @@ export class ToDo{
     }
 
     compare(comparable: ToDoComparable): ToDo{
+        if (this._inLists.size > 0){
+            return new ToDo({
+                toDoId: this._toDoId,
+                title: comparable.title ?? this._title,
+                description: comparable.description ?? this._description,
+                isCompleted: comparable.isCompleted ?? this._isCompleted,
+                inLists: Array.from(this._inLists)
+            })
+        }
         return new ToDo({
             toDoId: this._toDoId,
             title: comparable.title ?? this._title,
             description: comparable.description ?? this._description,
-            isCompleted: comparable.isCompleted ?? this._isCompleted,
-            inLists: Array.from(this._inLists)
+            isCompleted: comparable.isCompleted ?? this._isCompleted
         })
+
     }
 }
