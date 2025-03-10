@@ -1,6 +1,9 @@
 import {TransactWriteCommandInputGenerator} from "../src/to-do-lambda/helpers/TransactWriteCommandInputGenerator";
 import {TransactWriteCommandInput} from "@aws-sdk/lib-dynamodb";
 
+
+// the generator generates the inputs backwards, so the inputs have to be entered the other way around to the expected result
+
 const test1result: TransactWriteCommandInput | undefined = undefined;
 const test2result: TransactWriteCommandInput | undefined = {
     TransactItems: [
@@ -98,6 +101,43 @@ const test4result: TransactWriteCommandInput | undefined = {
     ]
 }
 
+const test5result: TransactWriteCommandInput = {
+    TransactItems: [
+        {
+            Delete: {
+                TableName: "hey",
+                Key: {
+                    Id: "1"
+                }
+            }
+        },
+        {
+            Delete: {
+                TableName: "hey",
+                Key: {
+                    Id: "2"
+                }
+            }
+        },
+        {
+            Delete: {
+                TableName: "hey",
+                Key: {
+                    Id: "3"
+                }
+            }
+        },
+        {
+            Delete: {
+                TableName: "hey",
+                Key: {
+                    Id: "4"
+                }
+            }
+        }
+    ]
+}
+
 test("Check default construct", () => {
     expect((new TransactWriteCommandInputGenerator()
         .transcatWriteCommandInput))
@@ -121,4 +161,14 @@ test("Check mixed up with 3 updates and 1 delete", () => {
         .deleteReferencesToToDoFromLists("1", "list", ["1", "2", "3"])
         .transcatWriteCommandInput))
         .toStrictEqual(test4result);
+})
+
+test("Check chain of several deletes", () => {
+    const input: TransactWriteCommandInput | undefined = new TransactWriteCommandInputGenerator()
+        .deleteToDoFromToDos("hey", "4")
+        .deleteToDoFromToDos("hey", "3")
+        .deleteToDoFromToDos("hey", "2")
+        .deleteToDoFromToDos("hey", "1")
+        .transcatWriteCommandInput
+    expect(input).toStrictEqual(test5result);
 })

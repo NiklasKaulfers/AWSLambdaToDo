@@ -1,7 +1,7 @@
 import { APIGatewayProxyResultV2} from "aws-lambda";
 import {FunctionError} from "./errors/function-error";
 import {verify} from "./helpers/helpers";
-import {ToDo} from "./helpers/to-do";
+import {ToDo, ToDoInput} from "./helpers/to-do";
 import {PutCommandInput, PutCommandOutput} from "@aws-sdk/lib-dynamodb";
 import {putRequestDB} from "./helpers/ddb-helper";
 
@@ -21,20 +21,23 @@ export const createNewToDoInDb
     }
 }
 
-const verifyBodyAsToDo = (body?: string): ToDo => {
+export const verifyBodyAsToDo = (body?: string): ToDo => {
     verify({
         param: body,
         message: "Body is missing.",
         statusCode: 404
     });
-    const parsedBody = JSON.parse(body!);
-    if (!(parsedBody instanceof ToDo)) throw new FunctionError(400, "Needs Syntax of ToDo:" +
-        "toDoId: string,\n" +
-        "title: string,\n" +
-        "description?: string,\n" +
-        "isCompleted?: boolean,\n" +
-        "inLists?: string[]}");
-    return parsedBody;
+    const parsedBody: ToDoInput | any = JSON.parse(body as string);
+    try {
+        return new ToDo(parsedBody)
+    }catch (e){
+        throw new FunctionError(400, "Needs Syntax of ToDo:" +
+            "toDoId: string,\n" +
+            "title: string,\n" +
+            "description?: string,\n" +
+            "isCompleted?: boolean,\n" +
+            "inLists?: string[]}");
+    }
 }
 
 const sendPostRequestWithToDoToDB = async (toDo: ToDo): Promise<PutCommandOutput> => {
